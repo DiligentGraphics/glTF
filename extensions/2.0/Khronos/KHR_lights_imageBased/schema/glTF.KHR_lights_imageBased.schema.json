@@ -11,7 +11,9 @@
                 "$ref": "imageBasedLight.schema.json"
             },
             "minItems": 1
-        }
+        },
+        "extensions": {},
+        "extras": {}
     },
     "required": [
         "imageBasedLights"

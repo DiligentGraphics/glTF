@@ -27,7 +27,7 @@
             "description": "Brightness offset for both the specular and diffuse part. Offset is applied after the factor.",
             "default": 0.0
         },
-        "specularEnvironmentMap": {
+        "specularEnvironmentTexture": {
             "description": "The prefiltered specular environment map.",
             "index": {
                 "allOf": [ { "$ref": "glTFid.schema.json" } ],
@@ -47,7 +47,10 @@
             },
             "minItems": 9,
             "maxItems": 9
-        }
+        },
+        "name": {},
+        "extensions": {},
+        "extras": {}
     },
     "required": [
         "specularEnvironmentTexture",

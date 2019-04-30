@@ -5,6 +5,7 @@
 * Gary Hsu, Microsoft
 * Mike Bond, Adobe
 * Norbert Nopper, UX3D
+* Alexey Knyazev
 * `Please add or remove!`
 
 ## Status
@@ -13,7 +14,7 @@ Draft
 
 ## Dependencies
 
-Written against the glTF 2.0 spec and the `KHR_texture_features` extension.
+Written against the glTF 2.0 spec, requires `KHR_texture_cttf` extension, interacts with `EXT_texture_bc6h` extension.
 
 ## Overview
 
@@ -37,7 +38,7 @@ The `KHR_lights_imageBased` extension defines a array of image-based lights at t
                 "rotation": [0, 0, 0, 1],
                 "brightnessFactor": 1.0,
                 "brightnessOffset": 0.0,
-                "specularEnvironmentMap": 0,
+                "specularEnvironmentTexture": 0,
                 "diffuseSphericalHarmonics": [
                     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -51,13 +52,13 @@ The `KHR_lights_imageBased` extension defines a array of image-based lights at t
 
 ## Specular BRDF integration and Irradiance Coefficients
 
-This extension uses a prefiltered environment map to define the specular lighting utilizing the split sum approximation. More information:    
-[Specular BRDF integration in Google Filament](https://google.github.io/filament/Filament.md.html#lighting/imagebasedlights/processinglightprobes)  
-[Pre-Filtered Environment Map in Unreal Engine 4](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf)
+This extension uses a prefiltered environment map to define the specular lighting utilizing the split sum approximation. More information:
+- [Specular BRDF integration in Google Filament](https://google.github.io/filament/Filament.md.html#lighting/imagebasedlights/processinglightprobes)
+- [Pre-Filtered Environment Map in Unreal Engine 4](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf)
 
-This extension uses spherical harmonic coefficients to define irradiance used for diffuse lighting. Coefficients are calculated for the first 3 SH bands (l=2) and take the form of a 9x3 array. More information:  
-[Realtime Image Based Lighting using Spherical Harmonics](https://metashapes.com/blog/realtime-image-based-lighting-using-spherical-harmonics/)  
-[An Efficient Representation for Irradiance Environment Maps](http://graphics.stanford.edu/papers/envmap/)
+This extension uses spherical harmonic coefficients to define irradiance used for diffuse lighting. Coefficients are calculated for the first 3 SH bands (l=2) and take the form of a 9x3 array. More information:
+- [Realtime Image Based Lighting using Spherical Harmonics](https://metashapes.com/blog/realtime-image-based-lighting-using-spherical-harmonics/)
+- [An Efficient Representation for Irradiance Environment Maps](http://graphics.stanford.edu/papers/envmap/)
 
 ## Adding Light Instances to Scenes
 
@@ -77,7 +78,12 @@ Each scene can have a single IBL light attached to it by defining the `extension
 
 ### Validation and implementation notes
 
-- If `specularEnvironmentMap` is not a cube map with mip map, the light is invalid.
+- `specularEnvironmentTexture` must refer to a KTX2 image of **Cubemap** type as defined in KTX2, Section 4.3. Namely:
+  - `pixelHeight` must be greater than 0.
+  - `pixelDepth` must be 0.
+  - `numberOfArrayElements` must be 0.
+  - `numberOfFaces` must be 6.
+- The image must contain mip levels.
 - The color is encoded in linear space for all image formats.
 - Formula in shader code:
 
@@ -91,25 +97,81 @@ finalSampledColor = sampledColor * brightnessFactor + brightnessOffset;
 
 ### Encoding
 
-#### Normal Quality (Embedded and Mobile)
-- [RGBM](http://graphicrants.blogspot.com/2009/04/rgbm-color-encoding.html) 
-- Range is [0;8]
-  - Use `brightnessOffset` for negative values
-  - Use `brightnessFactor` for larger range
-- Supported in Filament and Unity
+#### Normal Quality
 
-RGBM is stored as `VK_FORMAT_R8G8B8A8_UNORM`.  
-It should be decoded and not be used directly. See [Light is beautiful](http://lousodrome.net/blog/light/tag/rgbm/).
+Data must be stored as a CTTF image with alpha channel conforming to RGBD (or RGBE, **TBD**) encoding.
 
-#### High Quality (Console and Desktop)
-- [BC6H](http://khronos.org/registry/DataFormat/specs/1.2/dataformat.1.2.html#_bc6h)
-- Supported in Unity and Unreal
+#### High Quality (Optional)
 
-If BC6H is not supported, the image should be decoded and can be reduced to 8 bits per color channel.
+Data must be stored as a KTX2 image with BC6H payload and linked via `EXT_texture_bc6h` extension.
+
+#### Example with Two Options for the Same Texture
+
+```json
+"extensionsUsed": [
+    "KHR_lights_imageBased", "KHR_texture_cttf", "KHR_image_ktx2", "EXT_texture_bc6h"
+],
+"extensionsRequired": [
+    "KHR_lights_imageBased", "KHR_texture_cttf", "KHR_image_ktx2"
+],
+"textures": [
+    {
+        "name": "Specular Environment Texture",
+        "extensions": {
+            "KHR_texture_cttf": {
+                "source": 0
+            },
+            "EXT_texture_bc6h": {
+                "source": 1
+            }
+
+        }
+    }
+],
+"images": [
+    {
+        "uri": "image_lo.ktx2",
+        "extensions": {
+            "KHR_image_ktx2": {
+                "supercompressionScheme": -1, // TBD, CTTF
+                "pixelWidth": 512,
+                "pixelHeight": 512,
+                "faces": 6,
+                "levels": [
+                    {
+                        "offset": 1024,
+                        "bytesOfImages": 10485,
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "uri": "image_hi.ktx2",
+        "extensions": {
+            "KHR_image_ktx2": {
+                "vkFormat": 144, // VK_FORMAT_BC6H_SFLOAT_BLOCK
+                "pixelWidth": 512,
+                "pixelHeight": 512,
+                "faces": 6,
+                "levels": [
+                    {
+                        "offset": 1024,
+                        "bytesOfImages": 10485,
+                    }
+                ]
+            }
+        }
+    }
+]
+```
 
 ## glTF Schema Updates
 
-* **JSON schema**: [scene.schema.json](../../../../specification/2.0/schema/scene.schema.json) and [glTF.schema.json](../../../../specification/2.0/schema/glTF.schema.json)
+* **JSON schema**: 
+- [glTF.KHR_lights_imageBased.schema.json](schema/glTF.KHR_lights_imageBased.schema.json)
+- [imageBasedLight.schema.json](schema/imageBasedLight.schema.json)
+- [scene.schema.json](schema/scene.KHR_lights_imageBased.schema.json)
 
 ## Known Implementations
 
