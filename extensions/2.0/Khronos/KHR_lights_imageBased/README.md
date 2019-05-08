@@ -84,7 +84,7 @@ Each scene can have a single IBL light attached to it by defining the `extension
   - `numberOfArrayElements` must be 0.
   - `numberOfFaces` must be 6.
 - The image must contain mip levels.
-- The color is encoded in linear space for all image formats.
+- The transfer function for all image formats must be linear.
 - Formula in shader code:
 
 ```
@@ -171,7 +171,7 @@ Data must be stored as a KTX2 image with BC6H payload and linked via `EXT_textur
 * **JSON schema**: 
 - [glTF.KHR_lights_imageBased.schema.json](schema/glTF.KHR_lights_imageBased.schema.json)
 - [imageBasedLight.schema.json](schema/imageBasedLight.schema.json)
-- [scene.schema.json](schema/scene.KHR_lights_imageBased.schema.json)
+- [scene.KHR_lights_imageBased.schema.json](schema/scene.KHR_lights_imageBased.schema.json)
 
 ## Known Implementations
 

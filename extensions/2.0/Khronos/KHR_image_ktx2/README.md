@@ -20,7 +20,7 @@ This extension adds the ability to specify images using the [KTX2 file format](h
 
 When the extension is used, it's allowed to use value `image/ktx2` for the `image.mimeType` property.
 
-Also, a JSON form of the KTX2 header is provided in the extension object, so implementations can check compatibility and allocate GPU resources upfront as well as directly pull needed sections of the KTX2 file instead of fetching them sequentially.
+Also, a JSON form of the KTX2 header is provided in the extension object, so implementations can check compatibility and allocate GPU resources up front as well as directly pull needed sections of the KTX2 file instead of fetching them sequentially.
 
 The following example shows an uncomressed RGBA8 2D image with swizzling metadata.
 
